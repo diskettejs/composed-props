@@ -24,7 +24,7 @@ interface ButtonProps {
 }
 
 function Button(props: ButtonProps) {
-  const { render, rest } = useComposableProps(props, ['label', 'icon'])
+  const { composed, rest } = useComposableProps(props, ['label', 'icon'])
   const [isHovered, setIsHovered] = useState(false)
 
   const state = { isHovered }
@@ -35,8 +35,8 @@ function Button(props: ButtonProps) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {render.icon(state)}
-      {render.label(state)}
+      {composed.icon(state)}
+      {composed.label(state)}
     </button>
   )
 }
@@ -65,7 +65,7 @@ function Button(props: ButtonProps) {
 
 ```tsx
 {
-	render: ComposedFns<T, K> // Object with render functions for each key
+	composed: ComposedFns<T, K> // Object with render functions for each key
 	rest: Omit<T, K[number]> // Remaining props not converted
 }
 ```
@@ -84,9 +84,9 @@ A prop that can be either a static value `V` or a function that receives props `
 
 ```tsx
 type ComposeOptions<T, U, V extends T> = {
-	fallback?: (renderProps: U) => V // Used when value is undefined
-	render?: (prevValue: T, renderProps: U) => V // Custom renderer for static values
-	transform?: (prevValue: V, renderProps: U) => V // Transform the final result
+	fallback?: (props: U) => V // Used when value is undefined
+	render?: (prevValue: T, props: U) => V // Custom renderer for static values
+	transform?: (prevValue: V, props: U) => V // Transform the final result
 }
 ```
 
@@ -103,22 +103,26 @@ interface TooltipProps {
 }
 
 function Tooltip(props: TooltipProps) {
-	const { render, rest } = useComposableProps(props, ['content', 'position'], {
-		content: {
-			fallback: () => 'Default tooltip',
-			transform: (content, state) => (state.isOpen ? content : ''),
+	const { composed, rest } = useComposableProps(
+		props,
+		['content', 'position'],
+		{
+			content: {
+				fallback: () => 'Default tooltip',
+				transform: (content, state) => (state.isOpen ? content : ''),
+			},
+			position: {
+				render: (staticPosition, state) =>
+					state.isOpen ? staticPosition : 'top',
+			},
 		},
-		position: {
-			render: (staticPosition, state) =>
-				state.isOpen ? staticPosition : 'top',
-		},
-	})
+	)
 
 	const [isOpen, setIsOpen] = useState(false)
 	const state = { isOpen }
 
 	return (
-		<div className={`tooltip tooltip-${render.position(state)}`}>
+		<div className={`tooltip tooltip-${composed.position(state)}`}>
 			{render.content(state)}
 		</div>
 	)
@@ -144,7 +148,7 @@ interface TableState {
 }
 
 function DataTable(props: DataTableProps) {
-  const { render, rest } = useComposableProps(
+  const { composed, rest } = useComposableProps(
     props,
     ['columns', 'data', 'loading']
   )
@@ -158,15 +162,15 @@ function DataTable(props: DataTableProps) {
 
   return (
     <div {...rest}>
-      {render.loading?.(tableState) && <LoadingSpinner />}
+      {composed.loading?.(tableState) && <LoadingSpinner />}
       <table>
         <thead>
-          {render.columns(tableState).map(col => (
+          {composed.columns(tableState).map(col => (
             <th key={col.key}>{col.title}</th>
           ))}
         </thead>
         <tbody>
-          {render.data(tableState).map((row, i) => (
+          {composed.data(tableState).map((row, i) => (
             <tr key={i}>{/* render row */}</tr>
           ))}
         </tbody>
@@ -229,11 +233,11 @@ interface MyProps {
 	flag: boolean
 }
 
-// TypeScript knows that render.text and render.count are functions
+// TypeScript knows that composed.text and composed.count are functions
 // that accept AppState and return string/number respectively
-const { render, rest } = useComposableProps(props, ['text', 'count'])
+const { composed, rest } = useComposableProps(props, ['text', 'count'])
 
-// render.text: (state: AppState) => string
-// render.count: (state: AppState) => number
+// composed.text: (state: AppState) => string
+// composed.count: (state: AppState) => number
 // rest: { flag: boolean }
 ```
