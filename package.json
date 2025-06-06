@@ -7,9 +7,9 @@
 	"scripts": {
 		"dev": "tsc --noEmit --watch",
 		"build": "del dist && tsc --outDir ./dist",
-		"test": "vitest",
 		"format": "prettier -c .",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"prepublishOnly": "pnpm build"
 	},
 	"files": [
 		"dist"
