@@ -1,5 +1,7 @@
 export { useComposableProps } from './use-composable-props.js'
 
+export { useComposedProps } from './use-composed-props.js'
+
 export type {
 	ComposableProp,
 	ComposeComponentProps,
