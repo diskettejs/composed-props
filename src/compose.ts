@@ -5,17 +5,7 @@ export function compose<T, U, V extends T>(
 	options?: ComposeOptions<T, U, V>,
 ): (props: U) => V {
 	return (renderProps) => {
-		let result
-
-		if (typeof value === 'function') {
-			result = value(renderProps)
-		} else {
-			if (options?.render) {
-				result = options.render(value as T, renderProps)
-			} else {
-				result = value
-			}
-		}
+		let result = typeof value === 'function' ? value(renderProps) : value
 
 		if (typeof value === 'undefined' && options?.fallback) {
 			result = options.fallback(renderProps)

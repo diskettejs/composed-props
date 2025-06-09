@@ -1,96 +1,112 @@
 # @noema/use-composable-props
 
-A React hook that enables composable props patterns, allowing components to accept either static values or functions that receive render props.
+React hooks that enable composable props patterns, allowing components to accept either static values or functions that receive render props.
 
-## Installation
+## ✨ Features
+
+- 🎯 **Dynamic Props**: Transform static props into dynamic functions that respond to component state. Choose between composable functions or pre-resolved values.
+- 🔧 **Flexible Composition**: Compose props with transform and/or fallback logic
+- 🎭 **TypeScript First**: Intelligent type inference
+
+## 📦 Installation
 
 ```bash
-npm install @noema/use-composable-props
+npm install @noema/composed-props
 ```
 
-## Overview
+```bash
+yarn add @noema/composed-props
+```
 
-`useComposableProps` transforms props that can be either static values or functions into consistent render functions, enabling flexible component APIs that support both simple static usage and advanced render prop patterns.
+```bash
+pnpm add @noema/composed-props
+```
 
-## Basic Usage
+## 🚀 Quick Start
 
 ```tsx
-import { useComposableProps, ComposableProp } from '@noema/use-composable-props'
+import React, { useState, ReactNode } from 'react'
+import { useComposedProps, ComposableProp } from '@noema/composed-props'
+
+type State = { isHovered: boolean }
 
 interface ButtonProps {
-  label: ComposableProp<{ isHovered: boolean }, string>
-  icon: ComposableProp<{ isHovered: boolean }, React.ReactNode>
-  className?: string
+	children?: ComposableProp<State, ReactNode>
+	className?: ComposableProp<State, string>
+	variant: 'primary' | 'secondary'
 }
 
-function Button(props: ButtonProps) {
-  const { composed, rest } = useComposableProps(props, ['label', 'icon'])
-  const [isHovered, setIsHovered] = useState(false)
+function DynamicButton({ children, className, ...props }: ButtonProps) {
+	const [isHovered, setIsHovered] = useState(false)
 
-  const state = { isHovered }
+	// Props are automatically resolved based on current state
+	const resolved = useComposedProps({ children, className }, { isHovered })
 
-  return (
-    <button
-      {...rest}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {composed.icon(state)}
-      {composed.label(state)}
-    </button>
-  )
+	return (
+		<button
+			className={resolved.className}
+			onMouseEnter={() => setIsHovered(true)}
+			onMouseLeave={() => setIsHovered(false)}
+			{...props}
+		>
+			{resolved.children}
+		</button>
+	)
 }
 
-// Usage with static values
-<Button label="Click me" icon={<StarIcon />} />
-
-// Usage with render functions
-<Button
-  label={(state) => state.isHovered ? "Click me!" : "Click me"}
-  icon={(state) => state.isHovered ? <StarFilledIcon /> : <StarIcon />}
+// Usage
+;<DynamicButton
+	label={({ isHovered }) => (isHovered ? 'Click me! 🎯' : 'Hover me')}
+	className={({ isHovered }) => `btn ${isHovered ? 'btn-hover' : 'btn-normal'}`}
+	variant="primary"
 />
 ```
 
-## API Reference
+## 📚 API Reference
 
-### `useComposableProps(props, keys, options?)`
+### `useComposedProps(props, renderProps, options?)`
 
-#### Parameters
-
-- **`props`** (`T extends Record<string, any>`): The component props object
-- **`keys`** (`readonly (keyof T)[]`): Array of prop keys to convert to render functions
-- **`options?`** (`OptionsMap<T, K>`): Optional configuration for each key
-
-#### Returns
+Returns all props already resolved/composed with the provided render props.
 
 ```tsx
-{
-	composed: ComposedFns<T, K> // Object with render functions for each key
-	rest: Omit<T, K[number]> // Remaining props not converted
+const resolved = useComposedProps(props, renderProps, options)
+```
+
+**Parameters:**
+
+- `props` - Object containing your component props (some may be functions)
+- `renderProps` - State/context object passed to composable prop functions
+- `options?` - Optional configuration for individual props
+
+**Returns:** Object with all props resolved to their final values
+
+### `useComposableProps(props, options?)`
+
+Returns functions that can be called with render props to resolve values on-demand.
+
+```tsx
+const composed = useComposableProps(props, options)
+```
+
+**Parameters:**
+
+- `props` - Object containing your component props
+- `options?` - Optional configuration for individual props
+
+**Returns:** Object with functions for each prop that accept render props
+
+### `ComposeOptions<T, U, V>`
+
+Configuration object for customizing prop composition behavior:
+
+```tsx
+interface ComposeOptions<T, U, V> {
+	fallback?: (props: U) => V // Used when prop is undefined
+	transform?: (value: V, props: U) => V // Transform final value
 }
 ```
 
-### Types
-
-#### `ComposableProp<T, V>`
-
-```tsx
-type ComposableProp<T, V> = V | ((props: T) => V)
-```
-
-A prop that can be either a static value `V` or a function that receives props `T` and returns `V`.
-
-#### `ComposeOptions<T, U, V>`
-
-```tsx
-type ComposeOptions<T, U, V extends T> = {
-	fallback?: (props: U) => V // Used when value is undefined
-	render?: (prevValue: T, props: U) => V // Custom renderer for static values
-	transform?: (prevValue: V, props: U) => V // Transform the final result
-}
-```
-
-## Advanced Usage
+## 🎯 Examples
 
 ### With Options
 
@@ -103,27 +119,23 @@ interface TooltipProps {
 }
 
 function Tooltip(props: TooltipProps) {
-	const { composed, rest } = useComposableProps(
-		props,
-		['content', 'position'],
-		{
-			content: {
-				fallback: () => 'Default tooltip',
-				transform: (content, state) => (state.isOpen ? content : ''),
-			},
-			position: {
-				render: (staticPosition, state) =>
-					state.isOpen ? staticPosition : 'top',
-			},
+	const composed = useComposableProps(props, {
+		content: {
+			fallback: () => 'Default tooltip',
+			transform: (content, state) => (state.isOpen ? content : ''),
 		},
-	)
+		position: {
+			render: (staticPosition, state) =>
+				state.isOpen ? staticPosition : 'top',
+		},
+	})
 
 	const [isOpen, setIsOpen] = useState(false)
 	const state = { isOpen }
 
 	return (
 		<div className={`tooltip tooltip-${composed.position(state)}`}>
-			{render.content(state)}
+			{composed.content(state)}
 		</div>
 	)
 }
@@ -148,10 +160,7 @@ interface TableState {
 }
 
 function DataTable(props: DataTableProps) {
-  const { composed, rest } = useComposableProps(
-    props,
-    ['columns', 'data', 'loading']
-  )
+  const composed = useComposableProps(props)
 
   const [tableState, setTableState] = useState<TableState>({
     sortBy: '',
@@ -161,7 +170,7 @@ function DataTable(props: DataTableProps) {
   })
 
   return (
-    <div {...rest}>
+    <div>
       {composed.loading?.(tableState) && <LoadingSpinner />}
       <table>
         <thead>
@@ -195,49 +204,38 @@ function DataTable(props: DataTableProps) {
 />
 ```
 
-## Use Cases
+## 🎭 TypeScript Support
 
-### 1. Conditional Rendering
-
-Perfect for components that need to render different content based on internal state:
+The library is built with TypeScript and provides excellent type inference:
 
 ```tsx
-<Button
-	label={(state) => (state.loading ? 'Loading...' : 'Submit')}
-	disabled={(state) => state.loading}
-/>
-```
-
-### 2. Dynamic Styling
-
-Enable responsive or stateful styling:
-
-```tsx
-<Card
-	className={(state) => `card ${state.isSelected ? 'selected' : ''}`}
-	style={(state) => ({ opacity: state.isDisabled ? 0.5 : 1 })}
-/>
-```
-
-## TypeScript Support
-
-The library is fully typed and provides excellent TypeScript support:
-
-```tsx
-import { ComposableProp } from '@noema/use-composable-props'
-
-// The hook automatically infers types from your props
 interface MyProps {
 	text: ComposableProp<AppState, string>
 	count: ComposableProp<AppState, number>
-	flag: boolean
 }
 
-// TypeScript knows that composed.text and composed.count are functions
-// that accept AppState and return string/number respectively
-const { composed, rest } = useComposableProps(props, ['text', 'count'])
-
-// composed.text: (state: AppState) => string
-// composed.count: (state: AppState) => number
-// rest: { flag: boolean }
+// TypeScript automatically infers the correct types
+const resolved = useComposedProps(props, state)
+// resolved.text: string
+// resolved.count: string
 ```
+
+## 🤝 When to Use Each Hook
+
+### `useComposedProps`
+
+✅ **Use when:**
+
+- You want convenience and clean syntax
+- Render props are stable and don't change frequently
+- You prefer declarative style
+- You want all props resolved at once
+
+### `useComposableProps`
+
+✅ **Use when:**
+
+- You need fine-grained control over when props are resolved
+- Render props change frequently during render
+- You want to optimize performance by avoiding unnecessary resolutions
+- You need to call the same composable prop with different states

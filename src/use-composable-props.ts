@@ -1,26 +1,22 @@
-import { useMemo } from 'react'
+import { DependencyList, useMemo } from 'react'
 import { compose } from './compose.js'
 import { ComposedFns, OptionsMap } from './types.js'
 
-export function useComposableProps<
-	T extends Record<string, any>,
-	const K extends readonly (keyof T)[],
->(
+export function useComposableProps<T extends Record<string, any>>(
 	props: T,
-	keys: K,
-	options?: OptionsMap<T, K>,
-): { composed: ComposedFns<T, K>; rest: Omit<T, K[number]> } {
+	options?: OptionsMap<T>,
+	deps: DependencyList = [props, options],
+): ComposedFns<T> {
 	return useMemo(() => {
-		const composed = {} as ComposedFns<T, K>
-		const rest = { ...props } as Omit<T, K[number]>
+		const composed = {} as ComposedFns<T>
 
-		for (const key of keys) {
+		for (const key in props) {
 			const value = props[key]
 			const option = options?.[key]
+			// @ts-expect-error
 			;(composed as any)[key] = compose(value, option)
-			delete (rest as any)[key]
 		}
 
-		return { composed, rest }
-	}, [props, keys, options])
+		return composed
+	}, deps)
 }

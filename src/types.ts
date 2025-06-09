@@ -3,9 +3,8 @@ import { ComponentPropsWithRef, ElementType } from 'react'
 export type ComposableProp<T, V> = V | ((props: T) => V)
 
 export type ComposeOptions<T, U, V extends T> = {
-	fallback?: (renderProps: U) => V
-	render?: (prevValue: T, renderProps: U) => V
-	transform?: (prevValue: V, renderProps: U) => V
+	fallback?: (props: U) => V
+	transform?: (value: V, props: U) => V
 }
 
 export type ComposeComponentProps<
@@ -13,14 +12,18 @@ export type ComposeComponentProps<
 	TElement extends ElementType = 'div',
 > = Omit<ComponentPropsWithRef<TElement>, keyof TProps> & TProps
 
-export type ComposedFns<T, K extends readonly (keyof T)[]> = {
-	[P in K[number]]: T[P] extends ComposableProp<infer S, infer R>
+export type ComposedFns<T> = {
+	[P in keyof T]: T[P] extends ComposableProp<infer S, infer R>
 		? (state: S) => R
-		: never
+		: (state: any) => T[P]
 }
 
-export type OptionsMap<T, K extends readonly (keyof T)[]> = {
-	[P in K[number]]?: T[P] extends ComposableProp<infer S, infer R>
+export type OptionsMap<T> = {
+	[P in keyof T]?: T[P] extends ComposableProp<infer S, infer R>
 		? ComposeOptions<R, S, R>
-		: never
+		: ComposeOptions<T[P], any, T[P]>
+}
+
+export type ResolvedProps<T, U> = {
+	[P in keyof T]: T[P] extends ComposableProp<U, infer R> ? R : T[P]
 }
