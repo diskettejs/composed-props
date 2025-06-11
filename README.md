@@ -29,18 +29,20 @@ import React, { useState, ReactNode } from 'react'
 import { useComposedProps, ComposableProp } from '@noema/composed-props'
 
 type State = { isHovered: boolean }
-
+type Variant = 'primary' | 'secondary'
 interface ButtonProps {
 	children?: ComposableProp<State, ReactNode>
-	className?: ComposableProp<State, string>
-	variant: 'primary' | 'secondary'
+	className?: ComposableProp<State & { variant: Variant }, string>
+	variant: Variant
 }
 
 function DynamicButton({ children, className, ...props }: ButtonProps) {
 	const [isHovered, setIsHovered] = useState(false)
 
-	// Props are automatically resolved based on current state
-	const resolved = useComposedProps({ children, className }, { isHovered })
+	const resolved = useComposedProps({ children, className }, {
+    children: { isHovered },
+    className: { isHovered, variant: 'primary' }
+  })
 
 	return (
 		<button
@@ -57,7 +59,7 @@ function DynamicButton({ children, className, ...props }: ButtonProps) {
 // Usage
 ;<DynamicButton
 	label={({ isHovered }) => (isHovered ? 'Click me! 🎯' : 'Hover me')}
-	className={({ isHovered }) => `btn ${isHovered ? 'btn-hover' : 'btn-normal'}`}
+	className={({ isHovered, variant }) => `btn ${isHovered && variant === 'primary ? 'btn-hover' : 'btn-normal'}`}
 	variant="primary"
 />
 ```
@@ -69,13 +71,13 @@ function DynamicButton({ children, className, ...props }: ButtonProps) {
 Returns all props already resolved/composed with the provided render props.
 
 ```tsx
-const resolved = useComposedProps(props, renderProps, options)
+const resolved = useComposedProps(props, state, options)
 ```
 
 **Parameters:**
 
 - `props` - Object containing your component props (some may be functions)
-- `renderProps` - State/context object passed to composable prop functions
+- `state` - State/context object passed to composable prop functions
 - `options?` - Optional configuration for individual props
 
 **Returns:** Object with all props resolved to their final values

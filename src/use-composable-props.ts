@@ -5,18 +5,21 @@ import { ComposedFns, OptionsMap } from './types.js'
 export function useComposableProps<T extends Record<string, any>>(
 	props: T,
 	options?: OptionsMap<T>,
-	deps: DependencyList = [props, options],
+	deps?: DependencyList,
 ): ComposedFns<T> {
-	return useMemo(() => {
-		const composed = {} as ComposedFns<T>
+	return useMemo(
+		() => {
+			const composed = {} as ComposedFns<T>
 
-		for (const key in props) {
-			const value = props[key]
-			const option = options?.[key]
-			// @ts-expect-error
-			;(composed as any)[key] = compose(value, option)
-		}
+			for (const key in props) {
+				const value = props[key]
+				const option = options?.[key]
+				// @ts-expect-error
+				;(composed as any)[key] = compose(value, option)
+			}
 
-		return composed
-	}, deps)
+			return composed
+		},
+		deps ?? [props, options],
+	)
 }

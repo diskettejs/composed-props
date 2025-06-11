@@ -1,29 +1,28 @@
 import { DependencyList, useMemo } from 'react'
 import { compose } from './compose.js'
-import { OptionsMap, ResolvedProps } from './types.js'
+import { OptionsMap, ResolvedProps, StateMap } from './types.js'
 
-export function useComposedProps<
-	T extends Record<string, any>,
-	U extends Record<string, any>,
->(
+export function useComposedProps<T extends Record<string, any>>(
 	props: T,
-	state: U,
+	state: StateMap<T>,
 	options?: OptionsMap<T>,
-	deps: DependencyList = [props, state, options],
-): ResolvedProps<T, U> {
-	return useMemo(() => {
-		const resolved = {} as ResolvedProps<T, U>
+	deps?: DependencyList,
+): ResolvedProps<T> {
+	return useMemo(
+		() => {
+			const resolved = {} as ResolvedProps<T>
 
-		for (const key in props) {
-			if (props.hasOwnProperty(key)) {
+			for (const key in props) {
 				const value = props[key]
+				const stateForKey = state[key]
 				const option = options?.[key]
-				// @ts-expect-error
-				const composedFn = compose(value, option)
-				;(resolved as any)[key] = composedFn(state)
-			}
-		}
 
-		return resolved
-	}, deps)
+				// @ts-expect-error - TypeScript has trouble with the complex mapped types
+				resolved[key] = compose(value, option)(stateForKey)
+			}
+
+			return resolved
+		},
+		deps ?? [props, state, options],
+	)
 }
