@@ -24,6 +24,10 @@ export type OptionsMap<T> = {
 		: ComposeOptions<T[P], any, T[P]>
 }
 
-export type ResolvedProps<T, U> = {
-	[P in keyof T]: T[P] extends ComposableProp<U, infer R> ? R : T[P]
+export type ResolvedProps<T> = {
+	[P in keyof T]: T[P] extends ComposableProp<any, infer R> ? R : T[P]
+}
+
+export type StateMap<T> = {
+	[P in keyof T]: T[P] extends ComposableProp<infer S, infer _R> ? S : any
 }
