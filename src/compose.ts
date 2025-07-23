@@ -1,20 +1,25 @@
 import { ComposeOptions } from './types.js'
 
-export function compose<T, U, V extends T>(
-	value: T extends any ? T | ((props: U) => V) : never,
-	options?: ComposeOptions<T, U, V>,
+export function compose<U, V>(
+	value: V | ((props: U) => V) | undefined,
+	options?: ComposeOptions<V, U, V>,
 ): (props: U) => V {
 	return (renderProps) => {
-		let result = typeof value === 'function' ? value(renderProps) : value
+		let result: V | undefined
+		if (typeof value === 'function') {
+			result = (value as (props: U) => V)(renderProps)
+		} else {
+			result = value
+		}
 
-		if (typeof value === 'undefined' && options?.fallback) {
+		if (typeof result === 'undefined' && options?.fallback) {
 			result = options.fallback(renderProps)
 		}
 
-		if (options?.transform) {
+		if (options?.transform && result !== undefined) {
 			result = options.transform(result, renderProps)
 		}
 
-		return result
+		return result as V
 	}
 }
