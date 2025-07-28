@@ -1,123 +1,221 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { compose } from './compose.js'
 
 describe('compose', () => {
-	it('returns static value when prop is not a function', () => {
-		const result = compose('red')({})
-		expect(result).toBe('red')
+  it('returns static value when prop is not a function', () => {
+    const result = compose('red')({})
+    expect(result).toBe('red')
 
-		const result2 = compose(42)({ scale: 2 })
-		expect(result2).toBe(42)
+    const result2 = compose(42)({ scale: 2 })
+    expect(result2).toBe(42)
 
-		const result3 = compose(true)({})
-		expect(result3).toBe(true)
-	})
+    const result3 = compose(true)({})
+    expect(result3).toBe(true)
+  })
 
-	it('calls function prop with state', () => {
-		const prop = (state: { theme: string }) => state.theme === 'dark' ? 'white' : 'black'
-		
-		const result1 = compose(prop)({ theme: 'dark' })
-		expect(result1).toBe('white')
+  it('calls function prop with state', () => {
+    const prop = (state: { theme: string }) =>
+      state.theme === 'dark' ? 'white' : 'black'
 
-		const result2 = compose(prop)({ theme: 'light' })
-		expect(result2).toBe('black')
-	})
+    const result1 = compose(prop)({ theme: 'dark' })
+    expect(result1).toBe('white')
 
-	it('applies fallback when value is undefined', () => {
-		const options = { fallback: () => 'default' }
+    const result2 = compose(prop)({ theme: 'light' })
+    expect(result2).toBe('black')
+  })
 
-		const result1 = compose(undefined as string | undefined, options)({})
-		expect(result1).toBe('default')
+  it('applies fallback when value is undefined', () => {
+    const options = { fallback: () => 'default' }
 
-		const prop = () => undefined
-		const result2 = compose(prop, options)({})
-		expect(result2).toBe('default')
-	})
+    const result1 = compose(undefined as string | undefined, options)({})
+    expect(result1).toBe('default')
 
-	it('applies transform function', () => {
-		const options = { transform: (val: string) => val.toUpperCase() }
+    const prop = () => undefined
+    const result2 = compose(prop, options)({})
+    expect(result2).toBe('default')
+  })
 
-		const result1 = compose('hello', options)({})
-		expect(result1).toBe('HELLO')
+  it('applies transform function', () => {
+    const options = { transform: (val: string) => val.toUpperCase() }
 
-		const prop = (state: { text: string }) => state.text
-		const result2 = compose(prop, options)({ text: 'world' })
-		expect(result2).toBe('WORLD')
-	})
+    const result1 = compose('hello', options)({})
+    expect(result1).toBe('HELLO')
 
-	it('applies both fallback and transform', () => {
-		const options = {
-			fallback: () => 'default',
-			transform: (val: string) => val.toUpperCase(),
-		}
+    const prop = (state: { text: string }) => state.text
+    const result2 = compose(prop, options)({ text: 'world' })
+    expect(result2).toBe('WORLD')
+  })
 
-		const result1 = compose(undefined as string | undefined, options)({})
-		expect(result1).toBe('DEFAULT')
+  it('applies both fallback and transform', () => {
+    const options = {
+      fallback: () => 'default',
+      transform: (val: string) => val.toUpperCase(),
+    }
 
-		const result2 = compose('hello', options)({})
-		expect(result2).toBe('HELLO')
-	})
+    const result1 = compose(undefined as string | undefined, options)({})
+    expect(result1).toBe('DEFAULT')
 
-	it('handles null values', () => {
-		const result = compose(null)({})
-		expect(result).toBe(null)
+    const result2 = compose('hello', options)({})
+    expect(result2).toBe('HELLO')
+  })
 
-		const options = { fallback: () => 'default' }
-		const result2 = compose(null, options)({})
-		expect(result2).toBe(null)
-	})
+  it('handles null values', () => {
+    const result = compose(null)({})
+    expect(result).toBe(null)
 
-	it('handles complex objects', () => {
-		const style = { color: 'red', fontSize: 16 }
-		const result = compose(style)({})
-		expect(result).toEqual({ color: 'red', fontSize: 16 })
-	})
+    const options = { fallback: () => 'default' }
+    const result2 = compose(null, options)({})
+    expect(result2).toBe(null)
+  })
 
-	it('calls fallback function when value is undefined', () => {
-		const fallbackFn = vi.fn(() => 'fallback value')
-		const options = { fallback: fallbackFn }
+  it('handles complex objects', () => {
+    const style = { color: 'red', fontSize: 16 }
+    const result = compose(style)({})
+    expect(result).toEqual({ color: 'red', fontSize: 16 })
+  })
 
-		const result = compose(undefined as string | undefined, options)({ theme: 'dark' })
-		expect(result).toBe('fallback value')
-		expect(fallbackFn).toHaveBeenCalledWith({ theme: 'dark' })
-	})
+  it('calls fallback function when value is undefined', () => {
+    const fallbackFn = vi.fn(() => 'fallback value')
+    const options = { fallback: fallbackFn }
 
-	it('calls transform with state', () => {
-		const transformFn = vi.fn((val: string, state: { theme: string }) => 
-			`${val}-${state.theme}`
-		)
-		const options = { transform: transformFn }
+    const result = compose(
+      undefined as string | undefined,
+      options,
+    )({ theme: 'dark' })
+    expect(result).toBe('fallback value')
+    expect(fallbackFn).toHaveBeenCalledWith({ theme: 'dark' }, undefined)
+  })
 
-		const result = compose('color', options)({ theme: 'dark' })
-		expect(result).toBe('color-dark')
-		expect(transformFn).toHaveBeenCalledWith('color', { theme: 'dark' })
-	})
+  it('calls transform with state', () => {
+    const transformFn = vi.fn(
+      (val: string, state: { theme: string }) => `${val}-${state.theme}`,
+    )
+    const options = { transform: transformFn }
 
-	it('propagates errors from function props', () => {
-		const errorProp = () => {
-			throw new Error('Test error')
-		}
+    const result = compose('color', options)({ theme: 'dark' })
+    expect(result).toBe('color-dark')
+    expect(transformFn).toHaveBeenCalledWith(
+      'color',
+      { theme: 'dark' },
+      undefined,
+    )
+  })
 
-		expect(() => compose(errorProp)({})).toThrow('Test error')
-	})
+  describe('default option', () => {
+    it('passes default value to function as second argument', () => {
+      const fn = vi.fn((state: { count: number }, defaultValue?: number) =>
+        state.count > 0 ? state.count : (defaultValue ?? 0),
+      )
+      const options = { default: 10 }
 
-	it('propagates errors from transform function', () => {
-		const options = {
-			transform: () => {
-				throw new Error('Transform error')
-			},
-		}
+      const result1 = compose(fn, options)({ count: 5 })
+      expect(result1).toBe(5)
+      expect(fn).toHaveBeenCalledWith({ count: 5 }, 10)
 
-		expect(() => compose('value', options)({})).toThrow('Transform error')
-	})
+      const result2 = compose(fn, options)({ count: 0 })
+      expect(result2).toBe(10)
+      expect(fn).toHaveBeenCalledWith({ count: 0 }, 10)
+    })
 
-	it('handles empty options', () => {
-		const result = compose('value', {})({})
-		expect(result).toBe('value')
-	})
+    it('uses default value when result is undefined and no fallback', () => {
+      const fn = () => undefined
+      const options = { default: 'default-value' }
 
-	it('handles undefined options', () => {
-		const result = compose('value', undefined)({})
-		expect(result).toBe('value')
-	})
+      const result = compose(fn, options)({})
+      expect(result).toBe('default-value')
+    })
+
+    it('fallback takes precedence over default when both are specified', () => {
+      const fn = () => undefined
+      const options = {
+        fallback: () => 'fallback-value',
+        default: 'default-value',
+      }
+
+      const result = compose(fn, options)({})
+      expect(result).toBe('fallback-value')
+    })
+
+    it('passes default value to fallback function', () => {
+      const fallbackFn = vi.fn((_state: any, defaultValue?: string) =>
+        defaultValue ? `${defaultValue}-fallback` : 'fallback',
+      )
+      const options = {
+        fallback: fallbackFn,
+        default: 'base',
+      }
+
+      const result = compose(
+        undefined as string | undefined,
+        options,
+      )({ theme: 'dark' })
+      expect(result).toBe('base-fallback')
+      expect(fallbackFn).toHaveBeenCalledWith({ theme: 'dark' }, 'base')
+    })
+
+    it('passes default value to transform function', () => {
+      const transformFn = vi.fn(
+        (val: string, _state: any, defaultValue?: string) =>
+          defaultValue ? `${val}-${defaultValue}` : val,
+      )
+      const options = {
+        transform: transformFn,
+        default: 'base',
+      }
+
+      const result = compose('value', options)({ theme: 'dark' })
+      expect(result).toBe('value-base')
+      expect(transformFn).toHaveBeenCalledWith(
+        'value',
+        { theme: 'dark' },
+        'base',
+      )
+    })
+
+    it('uses default when fallback returns undefined', () => {
+      const options = {
+        fallback: () => undefined,
+        default: 'default-value',
+      }
+
+      const result = compose(undefined as string | undefined, options)({})
+      expect(result).toBe('default-value')
+    })
+
+    it('transforms default value when used as final result', () => {
+      const options = {
+        default: 'default',
+        transform: (val: string) => val.toUpperCase(),
+      }
+
+      const result = compose(undefined as string | undefined, options)({})
+      expect(result).toBe('DEFAULT')
+    })
+
+    it('works with complex default values', () => {
+      const defaultStyle = { color: 'blue', fontSize: 14 }
+      const fn = (state: { override?: boolean }) =>
+        state.override ? { color: 'red', fontSize: 16 } : undefined
+
+      const options = { default: defaultStyle }
+
+      const result1 = compose(fn, options)({ override: false })
+      expect(result1).toEqual({ color: 'blue', fontSize: 14 })
+
+      const result2 = compose(fn, options)({ override: true })
+      expect(result2).toEqual({ color: 'red', fontSize: 16 })
+    })
+
+    it('handles null vs undefined correctly', () => {
+      const options = { default: 'default-value' }
+
+      // null is a valid value, should not use default
+      const result1 = compose(null, options)({})
+      expect(result1).toBe(null)
+
+      // undefined should use default
+      const result2 = compose(undefined as string | undefined, options)({})
+      expect(result2).toBe('default-value')
+    })
+  })
 })

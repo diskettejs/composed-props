@@ -82,7 +82,7 @@ const resolved = useComposedProps(props, state, options)
 
 **Returns:** Object with all props resolved to their final values
 
-### `useComposableProps(props, options?)`
+### `useComposableProps(props, options?)`'
 
 Returns functions that can be called with render props to resolve values on-demand.
 
@@ -103,8 +103,8 @@ Configuration object for customizing prop composition behavior:
 
 ```tsx
 interface ComposeOptions<T, U, V> {
-	fallback?: (props: U) => V // Used when prop is undefined
-	transform?: (value: V, props: U) => V // Transform final value
+  fallback?: (props: U) => V // Used when prop is undefined
+  transform?: (value: V, props: U) => V // Transform final value
 }
 ```
 
@@ -116,30 +116,30 @@ interface ComposeOptions<T, U, V> {
 import { useComposableProps, ComposableProp } from '@noema/use-composable-props'
 
 interface TooltipProps {
-	content: ComposableProp<{ isOpen: boolean }, string>
-	position: ComposableProp<{ isOpen: boolean }, 'top' | 'bottom'>
+  content: ComposableProp<{ isOpen: boolean }, string>
+  position: ComposableProp<{ isOpen: boolean }, 'top' | 'bottom'>
 }
 
 function Tooltip(props: TooltipProps) {
-	const composed = useComposableProps(props, {
-		content: {
-			fallback: () => 'Default tooltip',
-			transform: (content, state) => (state.isOpen ? content : ''),
-		},
-		position: {
-			render: (staticPosition, state) =>
-				state.isOpen ? staticPosition : 'top',
-		},
-	})
+  const composed = useComposableProps(props, {
+    content: {
+      fallback: () => 'Default tooltip',
+      transform: (content, state) => (state.isOpen ? content : ''),
+    },
+    position: {
+      render: (staticPosition, state) =>
+        state.isOpen ? staticPosition : 'top',
+    },
+  })
 
-	const [isOpen, setIsOpen] = useState(false)
-	const state = { isOpen }
+  const [isOpen, setIsOpen] = useState(false)
+  const state = { isOpen }
 
-	return (
-		<div className={`tooltip tooltip-${composed.position(state)}`}>
-			{composed.content(state)}
-		</div>
-	)
+  return (
+    <div className={`tooltip tooltip-${composed.position(state)}`}>
+      {composed.content(state)}
+    </div>
+  )
 }
 ```
 
@@ -212,12 +212,14 @@ The library is built with TypeScript and provides excellent type inference:
 
 ```tsx
 interface MyProps {
-	text: ComposableProp<AppState, string>
-	count: ComposableProp<AppState, number>
+  className?: ComposableProp<AppState, string>
+  text: ComposableProp<AppState, string>
+  count: ComposableProp<AppState, number>
 }
 
 // TypeScript automatically infers the correct types
 const resolved = useComposedProps(props, state)
+// resolved.className: string
 // resolved.text: string
 // resolved.count: string
 ```
