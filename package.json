@@ -1,5 +1,5 @@
 {
-  "name": "@noema/composed-props",
+  "name": "@diskette/composed-props",
   "type": "module",
   "version": "0.4.1",
   "sideEffects": false,
@@ -7,20 +7,15 @@
   "scripts": {
     "dev": "tsc --noEmit --watch",
     "build": "del dist && tsc --outDir ./dist",
-    "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "version": "changeset version",
+    "release": "changeset publish && git push --follow-tags"
   },
   "files": [
     "dist"
   ],
-  "keywords": [
-    "hooks",
-    "props",
-    "react"
-  ],
-  "license": "MIT",
   "peerDependencies": {
     "@types/react": "*",
     "react": "^18.0 || ^19.0 || ^19.0.0-rc"
@@ -30,11 +25,8 @@
       "optional": true
     }
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/noemaia/use-composable-props.git"
-  },
   "devDependencies": {
+    "@changesets/cli": "^2.29.5",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/react-hooks": "^8.0.1",
@@ -47,7 +39,17 @@
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/diskettejs/composed-props.git"
+  },
   "packageManager": "pnpm@10.9.0+sha512.0486e394640d3c1fb3c9d43d49cf92879ff74f8516959c235308f5a8f62e2e19528a65cdc2a3058f587cde71eba3d5b56327c8c33a97e4c4051ca48a10ca2d5f",
+  "keywords": [
+    "hooks",
+    "props",
+    "react"
+  ],
+  "license": "MIT",
   "prettier": {
     "semi": false,
     "singleQuote": true

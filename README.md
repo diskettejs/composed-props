@@ -1,4 +1,4 @@
-# @noema/use-composable-props
+# @diskette/use-composable-props
 
 React hooks that enable composable props patterns, allowing components to accept either static values or functions that receive render props.
 
@@ -11,22 +11,22 @@ React hooks that enable composable props patterns, allowing components to accept
 ## 📦 Installation
 
 ```bash
-npm install @noema/composed-props
+npm install @diskette/composed-props
 ```
 
 ```bash
-yarn add @noema/composed-props
+yarn add @diskette/composed-props
 ```
 
 ```bash
-pnpm add @noema/composed-props
+pnpm add @diskette/composed-props
 ```
 
 ## 🚀 Quick Start
 
 ```tsx
 import React, { useState, ReactNode } from 'react'
-import { useComposedProps, ComposableProp } from '@noema/composed-props'
+import { useComposedProps, ComposableProp } from '@diskette/composed-props'
 
 type State = { isHovered: boolean }
 type Variant = 'primary' | 'secondary'
@@ -113,7 +113,10 @@ interface ComposeOptions<T, U, V> {
 ### With Options
 
 ```tsx
-import { useComposableProps, ComposableProp } from '@noema/use-composable-props'
+import {
+  useComposableProps,
+  ComposableProp,
+} from '@diskette/use-composable-props'
 
 interface TooltipProps {
   content: ComposableProp<{ isOpen: boolean }, string>
@@ -146,7 +149,7 @@ function Tooltip(props: TooltipProps) {
 ### Complex State Management
 
 ```tsx
-import { useComposableProps, ComposableProp } from '@noema/use-composable-props'
+import { useComposableProps, ComposableProp } from '@diskette/use-composable-props'
 
 interface DataTableProps {
   columns: ComposableProp<TableState, ColumnDef[]>
