@@ -4,6 +4,8 @@ export { useComposedProps } from './use-composed-props.js'
 
 export { createUseComposableProps } from './create-use-composable-props.js'
 
+export { createUseComposedProps } from './create-use-composed-props.js'
+
 export type {
   ComposableProp,
   ComposeComponentProps,
