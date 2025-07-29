@@ -1,201 +1,306 @@
-import { renderHook } from '@testing-library/react'
+import React from 'react'
+import { render, screen } from '@testing-library/react'
+import { userEvent } from '@testing-library/user-event'
+import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 import type { ComposableProp } from './types.js'
 import { useComposableProps } from './use-composable-props.js'
 
+interface ButtonState {
+  clickCount: number
+  isPressed: boolean
+  theme: 'light' | 'dark'
+}
+
+interface LabelState {
+  userName: string
+  isActive: boolean
+}
+
+interface ButtonProps {
+  label: ComposableProp<LabelState, string>
+  className?: ComposableProp<ButtonState, string>
+  disabled?: ComposableProp<ButtonState, boolean>
+  onClick?: () => void
+}
+
+function TestComponent({ label, className, disabled, onClick }: ButtonProps) {
+  const [clickCount, setClickCount] = useState(0)
+  const [isPressed, setIsPressed] = useState(false)
+  const [theme] = useState<'light' | 'dark'>('light')
+
+  const composed = useComposableProps({ label, className, disabled })
+
+  const buttonState: ButtonState = { clickCount, isPressed, theme }
+  const labelState: LabelState = { userName: 'TestUser', isActive: true }
+
+  return (
+    <button
+      className={composed.className(buttonState)}
+      disabled={composed.disabled(buttonState)}
+      onClick={() => {
+        setClickCount((c) => c + 1)
+        onClick?.()
+      }}
+      onMouseDown={() => setIsPressed(true)}
+      onMouseUp={() => setIsPressed(false)}
+      data-testid="test-button"
+    >
+      {composed.label(labelState)}
+    </button>
+  )
+}
+
 describe('useComposableProps', () => {
-  it('returns functions for static values', () => {
-    interface Props {
-      color: ComposableProp<{}, string>
-      size: ComposableProp<{}, number>
-      enabled: ComposableProp<{}, boolean>
-    }
+  describe('basic functionality', () => {
+    it('should handle static props', () => {
+      render(
+        <TestComponent
+          label="Static Label"
+          className="static-class"
+          disabled={true}
+        />,
+      )
 
-    const props: Props = {
-      color: 'red',
-      size: 10,
-      enabled: true,
-    }
+      const button = screen.getByTestId('test-button') as HTMLButtonElement
+      expect(button.textContent).toBe('Static Label')
+      expect(button.className).toBe('static-class')
+      expect(button.disabled).toBe(true)
+    })
 
-    const { result } = renderHook(() => useComposableProps(props))
+    it('should handle function props', () => {
+      render(
+        <TestComponent
+          label={({ userName, isActive }) =>
+            `${userName} is ${isActive ? 'active' : 'inactive'}`
+          }
+          className={({ theme, clickCount }) =>
+            `btn-${theme} clicks-${clickCount}`
+          }
+          disabled={({ isPressed }) => isPressed}
+        />,
+      )
 
-    expect(result.current.color({})).toBe('red')
-    expect(result.current.size({})).toBe(10)
-    expect(result.current.enabled({})).toBe(true)
+      const button = screen.getByTestId('test-button') as HTMLButtonElement
+      expect(button.textContent).toBe('TestUser is active')
+      expect(button.className).toContain('btn-light')
+      expect(button.className).toContain('clicks-0')
+      expect(button.disabled).toBe(false)
+    })
+
+    it('should handle mixed static and function props', () => {
+      render(
+        <TestComponent
+          label="Mixed Label"
+          className={({ theme }) => `dynamic-${theme}`}
+          disabled={false}
+        />,
+      )
+
+      const button = screen.getByTestId('test-button') as HTMLButtonElement
+      expect(button.textContent).toBe('Mixed Label')
+      expect(button.className).toBe('dynamic-light')
+      expect(button.disabled).toBe(false)
+    })
   })
 
-  it('returns wrapped functions for function values', () => {
-    interface ThemeState {
-      theme: string
+  describe('options handling', () => {
+    interface StatusCardProps {
+      title?: ComposableProp<{ userName: string; isActive: boolean }, string>
+      className?: ComposableProp<{ clickCount: number; theme: string }, string>
+      disabled?: ComposableProp<{ clickCount: number }, boolean>
     }
 
-    interface ScaleState {
-      scale: number
+    function StatusCard({ title, className, disabled }: StatusCardProps) {
+      const composed = useComposableProps(
+        { title, className, disabled },
+        {
+          title: {
+            fallback: ({ userName }) => `Fallback for ${userName}`,
+            transform: (value, { isActive }) =>
+              isActive ? (value ?? '').toUpperCase() : (value ?? ''),
+          },
+          className: {
+            transform: (value, { clickCount }) =>
+              `${value} count-${clickCount}`,
+          },
+          disabled: {
+            default: false,
+          },
+        },
+      )
+
+      const titleState = { userName: 'John', isActive: true }
+      const styleState = { clickCount: 5, theme: 'light' }
+      const disabledState = { clickCount: 5 }
+
+      return (
+        <div>
+          <div data-testid="title-result">{composed.title(titleState)}</div>
+          <div data-testid="class-result">
+            {composed.className(styleState)}
+          </div>
+          <div data-testid="disabled-result">
+            {String(composed.disabled(disabledState))}
+          </div>
+        </div>
+      )
     }
 
-    interface Props {
-      color: ComposableProp<ThemeState, string>
-      size: ComposableProp<ScaleState, number>
-    }
+    it('should use default values when prop is undefined', () => {
+      interface ButtonProps {
+        label?: ComposableProp<{ isActive: boolean }, string>
+      }
 
-    const props: Props = {
-      color: (state) => (state.theme === 'dark' ? 'white' : 'black'),
-      size: (state) => state.scale * 10,
-    }
+      function Button({ label }: ButtonProps) {
+        const composed = useComposableProps(
+          { label },
+          { label: { default: 'Default Button' } },
+        )
+        return (
+          <button data-testid="button">
+            {composed.label({ isActive: false })}
+          </button>
+        )
+      }
 
-    const { result } = renderHook(() => useComposableProps(props))
+      render(<Button />)
+      expect(screen.getByTestId('button').textContent).toBe('Default Button')
+    })
 
-    expect(result.current.color({ theme: 'dark' })).toBe('white')
-    expect(result.current.color({ theme: 'light' })).toBe('black')
-    expect(result.current.size({ scale: 2 })).toBe(20)
+    it('should apply transform functions', () => {
+      render(
+        <StatusCard
+          className={({ theme }) => `base-${theme}`}
+        />,
+      )
+      expect(screen.getByTestId('title-result').textContent).toBe(
+        'FALLBACK FOR JOHN',
+      )
+      expect(screen.getByTestId('class-result').textContent).toBe(
+        'base-light count-5',
+      )
+    })
+
+    it('should use fallback when default is not provided', () => {
+      interface GreetingProps {
+        message?: ComposableProp<{ name: string }, string>
+      }
+
+      function Greeting({ message }: GreetingProps) {
+        const composed = useComposableProps(
+          { message },
+          { message: { fallback: ({ name }) => `Hello ${name}!` } },
+        )
+        return (
+          <div data-testid="greeting">
+            {composed.message({ name: 'World' })}
+          </div>
+        )
+      }
+
+      render(<Greeting />)
+      expect(screen.getByTestId('greeting').textContent).toBe('Hello World!')
+    })
   })
 
-  it('handles mixed static and function props', () => {
-    interface ScaleState {
-      scale: number
-    }
+  describe('memoization', () => {
+    it('should memoize results when dependencies do not change', () => {
+      let renderCount = 0
 
-    interface Props {
-      color: ComposableProp<{}, string>
-      size: ComposableProp<ScaleState, number>
-      enabled: ComposableProp<{}, boolean>
-    }
+      function TestMemo() {
+        const [count, setCount] = useState(0)
+        const props = { label: 'Test' }
+        const options = {
+          label: {
+            transform: (v: string) => {
+              renderCount++
+              return v
+            },
+          },
+        }
 
-    const props: Props = {
-      color: 'red',
-      size: (state) => state.scale * 10,
-      enabled: true,
-    }
+        const composed = useComposableProps(props, options)
 
-    const { result } = renderHook(() => useComposableProps(props))
+        return (
+          <div>
+            <div data-testid="label">{composed.label({})}</div>
+            <button
+              onClick={() => setCount((c) => c + 1)}
+              data-testid="increment"
+            >
+              Count: {count}
+            </button>
+          </div>
+        )
+      }
 
-    expect(result.current.color({})).toBe('red')
-    expect(result.current.size({ scale: 3 })).toBe(30)
-    expect(result.current.enabled({})).toBe(true)
-  })
+      render(<TestMemo />)
+      expect(renderCount).toBe(1)
 
-  it('applies fallback when value is undefined', () => {
-    interface ScaleState {
-      scale?: number
-    }
+      // Re-render without changing props/options
+      userEvent.click(screen.getByTestId('increment'))
+      expect(renderCount).toBe(1) // Should still be 1 due to memoization
+    })
 
-    interface Props {
-      color: ComposableProp<{}, string | undefined>
-      size: ComposableProp<ScaleState, number | undefined>
-    }
+    it('should re-compute when dependencies change', async () => {
+      const user = userEvent.setup()
 
-    const props: Props = {
-      color: undefined,
-      size: (state) => state.scale,
-    }
+      function TestDepsChange() {
+        const [label, setLabel] = useState('Initial')
+        const composed = useComposableProps({ label })
 
-    const options = {
-      color: { fallback: () => 'default' },
-      size: { fallback: () => 100 },
-    }
+        return (
+          <div>
+            <div data-testid="label">{composed.label({})}</div>
+            <button onClick={() => setLabel('Changed')} data-testid="change">
+              Change Label
+            </button>
+          </div>
+        )
+      }
 
-    const { result } = renderHook(() => useComposableProps(props, options))
+      render(<TestDepsChange />)
+      expect(screen.getByTestId('label').textContent).toBe('Initial')
 
-    expect(result.current.color({})).toBe('default')
-    expect(result.current.size({})).toBe(100)
-    expect(result.current.size({ scale: 50 })).toBe(50)
-  })
+      await user.click(screen.getByTestId('change'))
+      expect(screen.getByTestId('label').textContent).toBe('Changed')
+    })
 
-  it('applies transform function', () => {
-    interface Props {
-      color: ComposableProp<{}, string>
-      size: ComposableProp<{}, number>
-    }
+    it('should support custom dependency array', async () => {
+      const user = userEvent.setup()
 
-    const props: Props = {
-      color: 'red',
-      size: 10,
-    }
+      function TestCustomDeps() {
+        const [count, setCount] = useState(0)
+        const [ignored, setIgnored] = useState(0)
 
-    const options = {
-      color: { transform: (val: string) => val.toUpperCase() },
-      size: { transform: (val: number) => val * 2 },
-    }
+        const composed = useComposableProps(
+          { value: `Count: ${count}` },
+          {},
+          [count], // Only depend on count, not ignored
+        )
 
-    const { result } = renderHook(() => useComposableProps(props, options))
+        return (
+          <div>
+            <div data-testid="value">{composed.value({})}</div>
+            <button onClick={() => setCount((c) => c + 1)} data-testid="count">
+              Count
+            </button>
+            <button
+              onClick={() => setIgnored((i) => i + 1)}
+              data-testid="ignored"
+            >
+              Ignored: {ignored}
+            </button>
+          </div>
+        )
+      }
 
-    expect(result.current.color({})).toBe('RED')
-    expect(result.current.size({})).toBe(20)
-  })
+      render(<TestCustomDeps />)
+      expect(screen.getByTestId('value').textContent).toBe('Count: 0')
 
-  it('applies both fallback and transform', () => {
-    interface ScaleState {
-      scale?: number
-    }
-
-    interface Props {
-      color: ComposableProp<{}, string | undefined>
-      size: ComposableProp<ScaleState, number | undefined>
-    }
-
-    const props: Props = {
-      color: undefined,
-      size: (state) => state.scale,
-    }
-
-    const options = {
-      color: {
-        fallback: () => 'blue',
-        transform: (val: string | undefined) => val?.toUpperCase() ?? '',
-      },
-      size: {
-        fallback: () => 10,
-        transform: (val: number | undefined) => (val ?? 0) * 2,
-      },
-    }
-
-    const { result } = renderHook(() => useComposableProps(props, options))
-
-    expect(result.current.color({})).toBe('BLUE')
-    expect(result.current.size({})).toBe(20)
-    expect(result.current.size({ scale: 5 })).toBe(10)
-  })
-
-  it('memoizes result based on dependencies', () => {
-    interface Props {
-      color: ComposableProp<{}, string>
-    }
-
-    const props: Props = { color: 'red' }
-
-    const { result, rerender } = renderHook(
-      ({ props, options }) => useComposableProps(props, options),
-      { initialProps: { props, options: undefined } },
-    )
-
-    const firstResult = result.current
-
-    rerender({ props, options: undefined })
-    expect(result.current).toBe(firstResult)
-
-    rerender({ props: { color: 'blue' }, options: undefined })
-    expect(result.current).not.toBe(firstResult)
-  })
-
-  it('uses custom dependencies when provided', () => {
-    interface Props {
-      color: ComposableProp<{}, string>
-    }
-
-    const props: Props = { color: 'red' }
-    const customDep = { value: 1 }
-
-    const { result, rerender } = renderHook(
-      ({ props, dep }) => useComposableProps(props, undefined, [dep]),
-      { initialProps: { props, dep: customDep } },
-    )
-
-    const firstResult = result.current
-
-    rerender({ props: { color: 'blue' }, dep: customDep })
-    expect(result.current).toBe(firstResult)
-
-    rerender({ props: { color: 'blue' }, dep: { value: 2 } })
-    expect(result.current).not.toBe(firstResult)
+      await user.click(screen.getByTestId('count'))
+      expect(screen.getByTestId('value').textContent).toBe('Count: 1')
+    })
   })
 })

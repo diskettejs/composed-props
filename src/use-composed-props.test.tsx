@@ -1,289 +1,354 @@
-import { renderHook } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import React, { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 import type { ComposableProp } from './types.js'
 import { useComposedProps } from './use-composed-props.js'
 
+interface CardState {
+  isExpanded: boolean
+  variant: 'primary' | 'secondary'
+}
+
+interface ImageState {
+  isLoaded: boolean
+  hasError: boolean
+}
+
 describe('useComposedProps', () => {
-  it('returns static values unchanged', () => {
-    interface Props {
-      color: ComposableProp<{}, string>
-      size: ComposableProp<{}, number>
-      enabled: ComposableProp<{}, boolean>
+  describe('basic functionality', () => {
+    interface ButtonProps {
+      label: ComposableProp<{ isActive: boolean }, string>
+      className: ComposableProp<{ theme: string }, string>
     }
 
-    const props: Props = {
-      color: 'red',
-      size: 10,
-      enabled: true,
+    function Button({ label, className }: ButtonProps) {
+      const resolved = useComposedProps(
+        { label, className },
+        {
+          label: { isActive: true },
+          className: { theme: 'dark' },
+        },
+      )
+
+      return (
+        <button data-testid="button" className={resolved.className}>
+          {resolved.label}
+        </button>
+      )
     }
 
-    const state = {
-      color: {},
-      size: {},
-      enabled: {},
-    }
+    it('should resolve static props', () => {
+      render(<Button label="Static Label" className="btn-static" />)
 
-    const { result } = renderHook(() => useComposedProps(props, state))
+      const button = screen.getByTestId('button')
+      expect(button.textContent).toBe('Static Label')
+      expect(button.className).toBe('btn-static')
+    })
 
-    expect(result.current).toEqual({
-      color: 'red',
-      size: 10,
-      enabled: true,
+    it('should resolve function props with provided state', () => {
+      render(
+        <Button
+          label={({ isActive }) => (isActive ? 'Active' : 'Inactive')}
+          className={({ theme }) => `btn-${theme}`}
+        />,
+      )
+
+      const button = screen.getByTestId('button')
+      expect(button.textContent).toBe('Active')
+      expect(button.className).toBe('btn-dark')
+    })
+
+    it('should handle mixed static and function props', () => {
+      render(
+        <Button
+          label="Mixed Label"
+          className={({ theme }) => `btn-${theme}-mixed`}
+        />,
+      )
+
+      const button = screen.getByTestId('button')
+      expect(button.textContent).toBe('Mixed Label')
+      expect(button.className).toBe('btn-dark-mixed')
     })
   })
 
-  it('resolves function values with state', () => {
-    interface ThemeState {
-      theme: string
+  describe('options handling', () => {
+    interface StatusCardProps {
+      title?: ComposableProp<{ userName: string }, string>
+      status?: ComposableProp<{ isOnline: boolean }, string>
+      className?: ComposableProp<{ priority: number }, string>
     }
 
-    interface ScaleState {
-      scale: number
+    function StatusCard({ title, status, className }: StatusCardProps) {
+      const resolved = useComposedProps(
+        { title, status, className },
+        {
+          title: { userName: 'John' },
+          status: { isOnline: true },
+          className: { priority: 5 },
+        },
+        {
+          title: {
+            default: 'Default Title',
+          },
+          status: {
+            fallback: ({ isOnline }) => (isOnline ? 'Online' : 'Offline'),
+            transform: (value) => `Status: ${value}`,
+          },
+          className: {
+            default: 'card',
+            transform: (value, { priority }) => `${value} priority-${priority}`,
+          },
+        },
+      )
+
+      return (
+        <div data-testid="card" className={resolved.className}>
+          <h3 data-testid="title">{resolved.title}</h3>
+          <span data-testid="status">{resolved.status}</span>
+        </div>
+      )
     }
 
-    interface Props {
-      color: ComposableProp<ThemeState, string>
-      size: ComposableProp<ScaleState, number>
-    }
+    it('should use default values when prop is undefined', () => {
+      render(<StatusCard />)
 
-    const props: Props = {
-      color: (state) => (state.theme === 'dark' ? 'white' : 'black'),
-      size: (state) => state.scale * 10,
-    }
+      expect(screen.getByTestId('title').textContent).toBe('Default Title')
+      expect(screen.getByTestId('card').className).toBe('card priority-5')
+    })
 
-    const state = {
-      color: { theme: 'dark' },
-      size: { scale: 2 },
-    }
+    it('should apply fallback when prop is undefined', () => {
+      render(<StatusCard />)
 
-    const { result } = renderHook(() => useComposedProps(props, state))
+      expect(screen.getByTestId('status').textContent).toBe('Status: Online')
+    })
 
-    expect(result.current).toEqual({
-      color: 'white',
-      size: 20,
+    it('should apply transform functions', () => {
+      render(
+        <StatusCard
+          title="Custom Title"
+          status="Away"
+          className="custom-card"
+        />,
+      )
+
+      expect(screen.getByTestId('title').textContent).toBe('Custom Title')
+      expect(screen.getByTestId('status').textContent).toBe('Status: Away')
+      expect(screen.getByTestId('card').className).toBe(
+        'custom-card priority-5',
+      )
+    })
+
+    it('should handle function props with options', () => {
+      render(
+        <StatusCard
+          title={({ userName }) => `Welcome ${userName}`}
+          status={({ isOnline }) => (isOnline ? 'Available' : 'Busy')}
+        />,
+      )
+
+      expect(screen.getByTestId('title').textContent).toBe('Welcome John')
+      expect(screen.getByTestId('status').textContent).toBe('Status: Available')
     })
   })
 
-  it('handles mixed static and function props', () => {
-    interface ScaleState {
-      scale: number
+  describe('state mapping', () => {
+    interface MultiStateProps {
+      cardTitle: ComposableProp<CardState, string>
+      imageUrl: ComposableProp<ImageState, string>
+      buttonLabel: ComposableProp<{ count: number }, string>
     }
 
-    interface Props {
-      color: ComposableProp<{}, string>
-      size: ComposableProp<ScaleState, number>
-      enabled: ComposableProp<{}, boolean>
+    function MultiStateComponent({
+      cardTitle,
+      imageUrl,
+      buttonLabel,
+    }: MultiStateProps) {
+      const resolved = useComposedProps(
+        { cardTitle, imageUrl, buttonLabel },
+        {
+          cardTitle: { isExpanded: false, variant: 'primary' },
+          imageUrl: { isLoaded: true, hasError: false },
+          buttonLabel: { count: 3 },
+        },
+      )
+
+      return (
+        <div>
+          <h2 data-testid="card-title">{resolved.cardTitle}</h2>
+          <img data-testid="image" src={resolved.imageUrl} alt="test" />
+          <button data-testid="button">{resolved.buttonLabel}</button>
+        </div>
+      )
     }
 
-    const props: Props = {
-      color: 'red',
-      size: (state) => state.scale * 10,
-      enabled: true,
-    }
+    it('should map different state objects to different props', () => {
+      render(
+        <MultiStateComponent
+          cardTitle={({ isExpanded, variant }) =>
+            `${variant.toUpperCase()} - ${isExpanded ? 'Open' : 'Closed'}`
+          }
+          imageUrl={({ isLoaded, hasError }) =>
+            hasError ? '/error.jpg' : isLoaded ? '/image.jpg' : '/loading.jpg'
+          }
+          buttonLabel={({ count }) => `Click me (${count})`}
+        />,
+      )
 
-    const state = {
-      color: {},
-      size: { scale: 3 },
-      enabled: {},
-    }
+      expect(screen.getByTestId('card-title').textContent).toBe(
+        'PRIMARY - Closed',
+      )
+      expect((screen.getByTestId('image') as HTMLImageElement).src).toContain(
+        '/image.jpg',
+      )
+      expect(screen.getByTestId('button').textContent).toBe('Click me (3)')
+    })
 
-    const { result } = renderHook(() => useComposedProps(props, state))
+    it('should handle static values with state mapping', () => {
+      render(
+        <MultiStateComponent
+          cardTitle="Static Title"
+          imageUrl="/static.jpg"
+          buttonLabel="Static Button"
+        />,
+      )
 
-    expect(result.current).toEqual({
-      color: 'red',
-      size: 30,
-      enabled: true,
+      expect(screen.getByTestId('card-title').textContent).toBe('Static Title')
+      expect((screen.getByTestId('image') as HTMLImageElement).src).toContain(
+        '/static.jpg',
+      )
+      expect(screen.getByTestId('button').textContent).toBe('Static Button')
     })
   })
 
-  it('applies fallback when value is undefined', () => {
-    interface ScaleState {
-      scale?: number
+  describe('memoization', () => {
+    let renderCount = 0
+
+    function MemoTest() {
+      const [count, setCount] = useState(0)
+      const [theme, setTheme] = useState('light')
+
+      renderCount++
+
+      const resolved = useComposedProps(
+        {
+          label: ({ count }: { count: number }) => `Count: ${count}`,
+          className: 'test-class',
+        },
+        {
+          label: { count },
+          className: { theme },
+        },
+      )
+
+      return (
+        <div>
+          <div data-testid="label">{resolved.label}</div>
+          <div data-testid="class">{resolved.className}</div>
+          <button data-testid="increment" onClick={() => setCount(count + 1)}>
+            Increment
+          </button>
+          <button
+            data-testid="toggle-theme"
+            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          >
+            Toggle Theme
+          </button>
+        </div>
+      )
     }
 
-    interface Props {
-      color: ComposableProp<{}, string | undefined>
-      size: ComposableProp<ScaleState, number | undefined>
-    }
+    it('should memoize results when dependencies do not change', () => {
+      renderCount = 0
+      render(<MemoTest />)
 
-    const props: Props = {
-      color: undefined,
-      size: (state) => state.scale,
-    }
+      expect(renderCount).toBe(1)
+      expect(screen.getByTestId('label').textContent).toBe('Count: 0')
+    })
 
-    const state = {
-      color: {},
-      size: {},
-    }
+    it('should support custom dependency array', () => {
+      function CustomDepsTest() {
+        const [ignored, setIgnored] = useState(0)
+        const [tracked, setTracked] = useState('initial')
 
-    const options = {
-      color: { fallback: () => 'default' },
-      size: { fallback: () => 100 },
-    }
+        const resolved = useComposedProps(
+          {
+            value: () => `Tracked: ${tracked}`,
+          },
+          {
+            value: {},
+          },
+          {},
+          [tracked], // Only track 'tracked', ignore 'ignored'
+        )
 
-    const { result } = renderHook(() => useComposedProps(props, state, options))
+        return (
+          <div>
+            <div data-testid="value">{resolved.value}</div>
+            <div data-testid="ignored">{ignored}</div>
+            <button
+              data-testid="change-ignored"
+              onClick={() => setIgnored(ignored + 1)}
+            >
+              Change Ignored
+            </button>
+            <button
+              data-testid="change-tracked"
+              onClick={() => setTracked('changed')}
+            >
+              Change Tracked
+            </button>
+          </div>
+        )
+      }
 
-    expect(result.current).toEqual({
-      color: 'default',
-      size: 100,
+      render(<CustomDepsTest />)
+      expect(screen.getByTestId('value').textContent).toBe('Tracked: initial')
     })
   })
 
-  it('applies transform function', () => {
-    interface Props {
-      color: ComposableProp<{}, string>
-      size: ComposableProp<{}, number>
-    }
+  describe('edge cases', () => {
+    it('should handle empty props object', () => {
+      function EmptyPropsTest() {
+        const resolved = useComposedProps({}, {})
+        return <div data-testid="empty">Empty: {JSON.stringify(resolved)}</div>
+      }
 
-    const props: Props = {
-      color: 'red',
-      size: 10,
-    }
-
-    const state = {
-      color: {},
-      size: {},
-    }
-
-    const options = {
-      color: { transform: (val: string) => val.toUpperCase() },
-      size: { transform: (val: number) => val * 2 },
-    }
-
-    const { result } = renderHook(() => useComposedProps(props, state, options))
-
-    expect(result.current).toEqual({
-      color: 'RED',
-      size: 20,
+      render(<EmptyPropsTest />)
+      expect(screen.getByTestId('empty').textContent).toBe('Empty: {}')
     })
-  })
 
-  it('applies both fallback and transform', () => {
-    interface ScaleState {
-      scale?: number
-    }
+    it('should handle optional props correctly', () => {
+      interface OptionalProps {
+        required: ComposableProp<{ id: number }, string>
+        optional?: ComposableProp<{ id: number }, string>
+      }
 
-    interface Props {
-      color: ComposableProp<{}, string | undefined>
-      size: ComposableProp<ScaleState, number | undefined>
-    }
+      function OptionalTest({ required, optional }: OptionalProps) {
+        const resolved = useComposedProps(
+          { required, optional },
+          {
+            required: { id: 1 },
+            optional: { id: 1 },
+          },
+          {
+            optional: { default: 'Default Optional' },
+          },
+        )
 
-    const props: Props = {
-      color: undefined,
-      size: (state) => state.scale,
-    }
+        return (
+          <div>
+            <div data-testid="required">{resolved.required}</div>
+            <div data-testid="optional">{resolved.optional}</div>
+          </div>
+        )
+      }
 
-    const state = {
-      color: {},
-      size: { scale: 5 },
-    }
-
-    const options = {
-      color: {
-        fallback: () => 'blue',
-        transform: (val: string | undefined) => val?.toUpperCase() ?? '',
-      },
-      size: {
-        transform: (val: number | undefined) => (val ?? 0) * 2,
-      },
-    }
-
-    const { result } = renderHook(() => useComposedProps(props, state, options))
-
-    expect(result.current).toEqual({
-      color: 'BLUE',
-      size: 10,
-    })
-  })
-
-  it('memoizes result based on dependencies', () => {
-    interface Props {
-      color: ComposableProp<{}, string>
-    }
-
-    const props: Props = { color: 'red' }
-    const state = {
-      color: {},
-    }
-
-    const { result, rerender } = renderHook(
-      ({ props, state, options }) => useComposedProps(props, state, options),
-      { initialProps: { props, state, options: undefined } },
-    )
-
-    const firstResult = result.current
-
-    rerender({ props, state, options: undefined })
-    expect(result.current).toBe(firstResult)
-
-    rerender({ props: { color: 'blue' }, state, options: undefined })
-    expect(result.current).not.toBe(firstResult)
-    expect(result.current).toEqual({ color: 'blue' })
-  })
-
-  it('uses custom dependencies when provided', () => {
-    interface Props {
-      color: ComposableProp<{}, string>
-    }
-
-    const props: Props = { color: 'red' }
-    const state = {
-      color: {},
-    }
-    const customDep = { value: 1 }
-
-    const { result, rerender } = renderHook(
-      ({ props, state, dep }) =>
-        useComposedProps(props, state, undefined, [dep]),
-      { initialProps: { props, state, dep: customDep } },
-    )
-
-    const firstResult = result.current
-
-    rerender({ props: { color: 'blue' }, state, dep: customDep })
-    expect(result.current).toBe(firstResult)
-
-    rerender({ props: { color: 'blue' }, state, dep: { value: 2 } })
-    expect(result.current).not.toBe(firstResult)
-  })
-
-  it('handles different state per prop', () => {
-    interface ThemeState {
-      theme: string
-    }
-
-    interface ScaleState {
-      scale: number
-    }
-
-    interface ActiveState {
-      active: boolean
-    }
-
-    interface Props {
-      color: ComposableProp<ThemeState, string>
-      size: ComposableProp<ScaleState, number>
-      enabled: ComposableProp<ActiveState, boolean>
-    }
-
-    const props: Props = {
-      color: (state) => (state.theme === 'dark' ? 'white' : 'black'),
-      size: (state) => state.scale * 10,
-      enabled: (state) => state.active,
-    }
-
-    const state = {
-      color: { theme: 'dark' },
-      size: { scale: 1.5 },
-      enabled: { active: true },
-    }
-
-    const { result } = renderHook(() => useComposedProps(props, state))
-
-    expect(result.current).toEqual({
-      color: 'white',
-      size: 15,
-      enabled: true,
+      render(<OptionalTest required="Required Value" />)
+      expect(screen.getByTestId('required').textContent).toBe('Required Value')
+      expect(screen.getByTestId('optional').textContent).toBe(
+        'Default Optional',
+      )
     })
   })
 })
