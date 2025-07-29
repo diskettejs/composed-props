@@ -1,5 +1,12 @@
 # @diskette/composed-props
 
+## 0.6.0
+
+### Minor Changes
+
+- 97f5b14: create createUseComposableProps hook factory
+- ccc2f0c: create createUseComposedProps hook factory
+
 ## 0.5.1
 
 ### Patch Changes
