@@ -3,20 +3,17 @@ import { compose } from './compose.js'
 import { OptionsMap, ResolvedProps, StateMap } from './types.js'
 
 /**
- * Returns all props pre-resolved/composed with the provided state values.
+ * Resolves all ComposableProp values immediately using the provided state map.
  *
- * This hook takes your composable props and immediately resolves them using the provided
- * state map, returning an object with all final values. Use this when you want convenience
- * and clean syntax, and when your state is stable and doesn't change frequently during render.
+ * Takes ComposableProp values and their corresponding state objects, then returns
+ * an object containing all resolved final values. The resolution process applies
+ * any configured options including fallback, transform, and default value logic.
  *
- * @template T - The props object type containing ComposableProp values
- *
- * @param props - Object containing your component props, where values can be ComposableProp<State, Value>
- * @param state - State map where each key corresponds to a prop and provides the state for that prop's resolution
- * @param options - Optional configuration for individual props with fallback, transform, and default logic
+ * @param props - Object containing ComposableProp values to resolve
+ * @param state - State map where each key corresponds to a prop and provides the state for resolution
+ * @param options - Optional configuration specifying fallback, transform, and default logic per prop
  * @param deps - Optional dependency array for memoization (defaults to [props, state, options])
- *
- * @returns Object with all props resolved to their final values
+ * @returns Object containing all props resolved to their final values
  *
  * @example
  * ```tsx
