@@ -1,5 +1,11 @@
 # @diskette/composed-props
 
+## 0.6.1
+
+### Patch Changes
+
+- 0bb170e: fix hooks ignoring option keys not in props
+
 ## 0.6.0
 
 ### Minor Changes
