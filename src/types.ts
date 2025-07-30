@@ -1,10 +1,7 @@
 import { ComponentPropsWithRef, ElementType } from 'react'
 
 /**
- * Represents a prop value that may be static or computed dynamically from component state.
- *
- * `ComposableProp` allows component props to accept either a direct value or a function that
- * computes the value based on the current component state. The function receives the state
+ * Represents a prop value that may be static or computed dynamically from component state. Functions receives the state
  * as its first argument and an optional default value as its second argument.
  *
  * @example
@@ -67,6 +64,23 @@ export type ComposeOptions<T, U, V extends T> = {
   default?: V
 }
 
+/**
+ * Merges custom component props with standard HTML element props, giving priority to custom props.
+ * @example
+ * ```tsx
+ * interface ButtonProps {
+ *   variant: ComposableProp<ThemeState, 'primary' | 'secondary'>
+ *   disabled: ComposableProp<FormState, boolean>
+ * }
+ *
+ * type MyButtonProps = ComposeComponentProps<ButtonProps, 'button'>
+ * // Result: All button HTML props + variant + disabled (as ComposableProps)
+ *
+ * const MyButton = ({ variant, disabled, onClick, ...rest }: MyButtonProps) => (
+ *   <button onClick={onClick} {...rest}>...</button>
+ * )
+ * ```
+ */
 export type ComposeComponentProps<
   TProps extends Record<string, any>,
   TElement extends ElementType = 'div',

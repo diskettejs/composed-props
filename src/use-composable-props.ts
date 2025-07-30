@@ -94,8 +94,11 @@ export function useComposableProps<T extends Record<string, any>>(
   return useMemo(
     () => {
       const composed = {} as ComposedFns<T>
-
-      for (const key in props) {
+      const allKeys = new Set([
+        ...Object.keys(props),
+        ...(options ? Object.keys(options) : []),
+      ])
+      for (const key of allKeys) {
         const value = props[key]
         const option = options?.[key]
         // @ts-expect-error

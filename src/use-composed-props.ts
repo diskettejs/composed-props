@@ -98,7 +98,13 @@ export function useComposedProps<T extends Record<string, any>>(
     () => {
       const resolved = {} as ResolvedProps<T>
 
-      for (const key in props) {
+      // Get all keys from both props and options
+      const allKeys = new Set([
+        ...Object.keys(props),
+        ...(options ? Object.keys(options) : [])
+      ])
+
+      for (const key of allKeys) {
         const value = props[key]
         const stateForKey = state[key]
         const option = options?.[key]

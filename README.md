@@ -1,4 +1,4 @@
-# @diskette/use-composable-props
+# @diskette/composed-props
 
 React hooks that enable composable props patterns, allowing components to accept either static values or functions that receive render props.
 
@@ -113,10 +113,7 @@ interface ComposeOptions<T, U, V> {
 ### With Options
 
 ```tsx
-import {
-  useComposableProps,
-  ComposableProp,
-} from '@diskette/use-composable-props'
+import { useComposableProps, ComposableProp } from '@diskette/composed-props'
 
 interface TooltipProps {
   content: ComposableProp<{ isOpen: boolean }, string>
@@ -149,7 +146,7 @@ function Tooltip(props: TooltipProps) {
 ### Complex State Management
 
 ```tsx
-import { useComposableProps, ComposableProp } from '@diskette/use-composable-props'
+import { useComposableProps, ComposableProp } from '@diskette/composed-props'
 
 interface DataTableProps {
   columns: ComposableProp<TableState, ColumnDef[]>
