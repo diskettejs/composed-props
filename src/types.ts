@@ -60,8 +60,8 @@ export type ComposeOptions<T, U, V extends T> = {
   fallback?: (props: U, defaultValue?: V) => V
   /** Function to transform the final resolved value. Called with the `value`, `state`, and `default` value. */
   transform?: (value: V, props: U, defaultValue?: V) => V
-  /** Default `value` to use when `prop` is `undefined` and no `fallback` is provided. */
-  default?: V
+  /** Default `value` to use when `prop` is `undefined` and no `fallback` is provided. Can be a static value or a function that receives the props. */
+  default?: V | ((props: U) => V)
 }
 
 /**
