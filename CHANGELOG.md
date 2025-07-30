@@ -1,5 +1,11 @@
 # @diskette/composed-props
 
+## 0.7.0
+
+### Minor Changes
+
+- db4e733: allow ComposeOption default to be a function
+
 ## 0.6.1
 
 ### Patch Changes
